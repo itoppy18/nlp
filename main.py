@@ -1,7 +1,6 @@
 #Library for natural language processing of Japanese
 #©2019 Mamoru Itoi
 
-import CaboCha
 import MeCab
 import re
 
@@ -18,33 +17,68 @@ def tokenizer(text):
 			token.append(data)
 		tokens.append(token)
 		m = m.next
+	tokens.pop(0)
+	tokens.pop(-1)
+	for i , token in enumerate(tokens):
+		if i != len(tokens) - 1:
+			token[0] = token[0].replace(tokens[i + 1][0], "")
+	for token in tokens:
+		if token[2] == "数":
+			token += ["*", "*"]
 	return tokens
 
-#係り受け解析
-def dependencyAnalyzer(text):
-	c = CaboCha.Parser()
-	tree =  c.parse(text)
-	chunks = []
-	t = ""
-	toChunkId = -1
-	dependencyList = []
-	for i in range(0, tree.size()):
-		token = tree.token(i)
-		t = token.surface if token.chunk else (t + token.surface) 
-		toChunkId = token.chunk.link if token.chunk else toChunkId
-		if i == tree.size() - 1 or tree.token(i+1).chunk:
-			chunks.append({'c': t, 'to': toChunkId})
-	for chunk in chunks:
-		if chunk['to'] >= 0:
-			dependencyList.append([chunk['c'], chunks[chunk['to']]['c']])
-	return dependencyList
-	
+#文節分け
+def newPhrasesSepaleter(text):
+	#形態素解析
+	tokens = tokenizer(text)
+	#文節リスト
+	phrases = []
+	#一つの文節のトークンリスト
+	phrase = []
+	#特別処理中フラグ
+	isSpecialAnalyzing = False
+	#付属語登場フラグ
+	didAttachedWordApper = None
+	#自立語リスト
+	independentParts = ["名詞", "動詞", "形容詞", "副詞", "連体詞", "感動詞", "接続詞", "接頭詞"]
+	#トークンごとの処理
+	for i, token in enumerate(tokens):
+		#見出し
+		surface = token[0]
+		#品詞
+		part = token[1]
+		#品詞細分類1
+		typeOfPart = token[2]
+		#もしpartが自立語で、はじめの文節でなく、didAttachedWordApperがTrueならば
+		if part in independentParts and i != 0:
+			isSpecialAnalyzing = False
+			if i + 1 != len(tokens) and part == "名詞" and didAttachedWordApper == None:
+				didAttachedWordApper = False
+			if phrase != []:
+				didAttachedWordApper = None
+				phrases.append(phrase)
+			phrase = []
+		#もしpartが付属語なら
+		else:
+			didAttachedWordApper = True
+		#もしtokenが漢語サ変動詞なら
+		if i != 0 and token[5] == "サ変・スル" or typeOfPart == ("非自立" or "接尾") or tokens[i - 1][1] == "接頭詞" or didAttachedWordApper == False:
+			isSpecialAnalyzing = True
+		if isSpecialAnalyzing:
+			phrases[-1].append(token)
+		else:
+			phrase.append(token)
+	if phrase != []:
+		phrases.append(phrase)
+	for phrase in phrases:
+		print(phrase)
+
 #活用がある単語を入力すると、その単語の活用を返す
 def inflections(word):
 	#形態素解析
 	tokens = tokenizer(word)
 	#抜き出し
-	token = tokens[1]
+	token = tokens[0]
 	#見出し
 	surface = token[0]
 	#品詞
@@ -79,7 +113,7 @@ def inflections(word):
 			#五段動詞・ガ行
 			elif re.search("ガ行", utilization):
 				stem = normal.replace("ぐ", "")
-				inflectionsList = [[stem + "が", stem + "ご"], [stem + "ぎ", stem + "げ"], stem + "ぐ", stem + "ぐ", stem + "げ", stem + "げ"]
+				inflectionsList = [[stem + "が", stem + "ご"], [stem + "ぎ", stem + "い"], stem + "ぐ", stem + "ぐ", stem + "げ", stem + "げ"]
 			#五段動詞・サ行
 			elif re.search("サ行", utilization):
 				stem = normal.replace("す", "")
@@ -153,7 +187,7 @@ def auxiliaryVerb(word, mode):
 	#形態素解析
 	tokens = tokenizer(word)
 	#抜き出し
-	token = tokens[1]
+	token = tokens[0]
 	#見出し
 	surface = token[0]
 	#品詞
@@ -221,7 +255,10 @@ def auxiliaryVerb(word, mode):
 	#過去
 	elif mode == "past":
 		if re.search("五段", utilization):
-			auxiliaryVerb = inflectionsList[1][1] + "た"
+			if re.search("ガ|ナ|バ|マ", utilization):
+				auxiliaryVerb = inflectionsList[1][1] + "だ"
+			else:
+				auxiliaryVerb = inflectionsList[1][1] + "た"
 		if re.search("一段|カ変|サ変", utilization):
 			auxiliaryVerb = inflectionsList[1] + "た"
 	#丁寧な断定
