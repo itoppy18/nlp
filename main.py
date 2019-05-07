@@ -28,7 +28,7 @@ def tokenizer(text):
 	return tokens
 
 #文節分け
-def newPhrasesSepaleter(text):
+def phrasesSepaleter(text):
 	#形態素解析
 	tokens = tokenizer(text)
 	#文節リスト
