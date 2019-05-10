@@ -3,6 +3,7 @@
 
 import MeCab
 import re
+import pysnooper
 
 #形態素解析
 def tokenizer(text):
@@ -28,6 +29,7 @@ def tokenizer(text):
 	return tokens
 
 #文節分け
+#@pysnooper.snoop()
 def phrasesSepaleter(text):
 	#形態素解析
 	tokens = tokenizer(text)
@@ -37,8 +39,6 @@ def phrasesSepaleter(text):
 	phrase = []
 	#特別処理中フラグ
 	isSpecialAnalyzing = False
-	#付属語登場フラグ
-	didAttachedWordApper = None
 	#自立語リスト
 	independentParts = ["名詞", "動詞", "形容詞", "副詞", "連体詞", "感動詞", "接続詞", "接頭詞"]
 	#トークンごとの処理
@@ -49,29 +49,25 @@ def phrasesSepaleter(text):
 		part = token[1]
 		#品詞細分類1
 		typeOfPart = token[2]
-		#もしpartが自立語で、はじめの文節でなく、didAttachedWordApperがTrueならば
+		#もしpartが自立語で、はじめの文節でないならば
 		if part in independentParts and i != 0:
 			isSpecialAnalyzing = False
-			if i + 1 != len(tokens) and part == "名詞" and didAttachedWordApper == None:
-				didAttachedWordApper = False
 			if phrase != []:
-				didAttachedWordApper = None
 				phrases.append(phrase)
-			phrase = []
-		#もしpartが付属語なら
-		else:
-			didAttachedWordApper = True
+				phrase = []
 		#もしtokenが漢語サ変動詞なら
-		if i != 0 and token[5] == "サ変・スル" or typeOfPart == ("非自立" or "接尾") or tokens[i - 1][1] == "接頭詞" or didAttachedWordApper == False:
+		if i != 0 and token[5] == "サ変・スル" or typeOfPart == "非自立" or typeOfPart == "接尾" or tokens[i - 1][1] == "接頭詞":
 			isSpecialAnalyzing = True
 		if isSpecialAnalyzing:
-			phrases[-1].append(token)
+			if phrases == []:
+				phrase.append(token)
+			else:
+				phrases[-1].append(token)
 		else:
 			phrase.append(token)
 	if phrase != []:
 		phrases.append(phrase)
-	for phrase in phrases:
-		print(phrase)
+	return phrases
 
 #活用がある単語を入力すると、その単語の活用を返す
 def inflections(word):
