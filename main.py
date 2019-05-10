@@ -1,9 +1,8 @@
 #Library for natural language processing of Japanese
-#©2019 Mamoru Itoi
+#Created by Mamoru Itoi
 
 import MeCab
 import re
-import pysnooper
 
 #形態素解析
 def tokenizer(text):
@@ -29,7 +28,6 @@ def tokenizer(text):
 	return tokens
 
 #文節分け
-#@pysnooper.snoop()
 def phrasesSepaleter(text):
 	#形態素解析
 	tokens = tokenizer(text)
