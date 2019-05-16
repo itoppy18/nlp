@@ -28,7 +28,7 @@ def tokenizer(text):
 	return tokens
 
 #文節分け
-def phrasesSepaleter(text):
+def phrasesSeparater(text):
 	#形態素解析
 	tokens = tokenizer(text)
 	#文節リスト
@@ -66,6 +66,11 @@ def phrasesSepaleter(text):
 	if phrase != []:
 		phrases.append(phrase)
 	return phrases
+
+def dependecyOfSentenceAnalyzer(text):
+	tokens = tokenizer(text)
+	phrases = phrasesSeparater(text)
+	
 
 #活用がある単語を入力すると、その単語の活用を返す
 def inflections(word):
